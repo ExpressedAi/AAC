@@ -107,7 +107,11 @@
      try {
        // Get conversation context for the main agent
        const conversationHistory = chatStorageService.getFullConversationHistory(newMessages);
-       const contextualPrompt = `${conversationHistory}\n\nUser: ${inputMessage}`;
+      
+      // Get learning context from rated responses
+      const learningContext = await chatStorageService.getLearningContextForMainAgent();
+      
+      const contextualPrompt = `${conversationHistory}${learningContext}\n\nUser: ${inputMessage}`;
        
        const response = await chatService.sendMessage(contextualPrompt, undefined, undefined, true);
        
