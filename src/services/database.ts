@@ -16,7 +16,36 @@
    }
 +
 +  async getLearningSummary(): Promise<string> {
+  async getAgentDailySummary(agentId: string, date: Date): Promise<any> {
 +    try {
+      const tasks = await this.getBackgroundTasks();
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayTasks = tasks.filter(task => {
+        const taskDate = task.timestamp.toISOString().split('T')[0];
+        return task.agentId === agentId && taskDate === dateStr;
+      });
+      
+      const completedTasks = dayTasks.filter(task => task.status === 'completed');
+      const ratedTasks = dayTasks.filter(task => task.rating);
+      
+      const averageRating = ratedTasks.length > 0 
+        ? ratedTasks.reduce((sum, task) => sum + (task.rating || 0), 0) / ratedTasks.length
+        : 0;
+      
+      return {
+        date: dateStr,
+        totalTasks: dayTasks.length,
+        completedTasks: completedTasks.length,
+        averageRating,
+        tasks: dayTasks
+      };
+    } catch (error) {
+      console.error('Error getting agent daily summary:', error);
+      return null;
+    }
+  }
+
 +      const ratedMessages = await this.getRatedResponses();
 +      
 +      if (ratedMessages.length === 0) {
