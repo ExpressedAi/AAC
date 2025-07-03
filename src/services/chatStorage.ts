@@ -20,7 +20,8 @@
 +      
 +      return `\n\n${learningSummary}`;
 +    } catch (error) {
-+      console.error('Error getting learning context:', error);
++      console.error('Error getting learning contex  t
+}:', error);
 +      return '';
 +    }
 +  }
