@@ -1,104 +1,190 @@
-import React, { useState } from 'react';
-import './App.css';
+@@ .. @@
+ import { chatStorageService } from './services/chatStorage';
+ import { ChatThreads } from './components/ChatThreads';
+ import { BackgroundTasks } from './components/BackgroundTasks';
+ import { LearningPanel } from './components/LearningPanel';
+ import { SettingsPanel } from './components/SettingsPanel';
+ import { MainAgentConfig } from './components/MainAgentConfig';
+ import { MCPServerManager } from './components/MCPServerManager';
+ import { MessageBubble } from './components/MessageBubble';
++import { taskManagementService } from './services/taskManagementService';
 
-function App() {
-  const [messages, setMessages] = useState<Array<{id: string, text: string, sender: 'user' | 'ai'}>>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+ type ActivePanel = 'chat' | 'threads' | 'tasks' | 'learning' | 'settings' | 'main-agent' | 'mcp';
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+ function App() {
+   const [messages, setMessages] = useState<Message[]>([]);
+   const [inputMessage, setInputMessage] = useState('');
+   const [isLoading, setIsLoading] = useState(false);
++  const [isDeploying, setIsDeploying] = useState(false);
+   const [activePanel, setActivePanel] = useState<ActivePanel>('chat');
+   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+   const [autoSaveCleanup, setAutoSaveCleanup] = useState<(() => void) | null>(null);
++  const [backgroundAgents, setBackgroundAgents] = useState<Agent[]>([]);
 
-    const userMessage = {
-      id: Date.now().toString(),
-      text: input,
-      sender: 'user' as const
-    };
+   useEffect(() => {
+     // Load the most recent thread on startup
+     const threads = chatStorageService.getAllThreads();
+     if (threads.length > 0) {
+       const mostRecent = threads[0];
+       setMessages(mostRecent.messages);
+       setCurrentThreadId(mostRecent.id);
+     }
++    
++    // Load background agents
++    loadBackgroundAgents();
+   }, []);
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
++  const loadBackgroundAgents = () => {
++    const activeAgents = taskManagementService.getActiveAgents();
++    setBackgroundAgents(activeAgents);
++  };
++
+   useEffect(() => {
+     // Setup auto-save for current thread
+     if (autoSaveCleanup) {
+       autoSaveCleanup();
+     }
 
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-pro-preview',
-          messages: [{ role: 'user', content: input }]
-        })
-      });
+     if (currentThreadId && messages.length > 0) {
+       const cleanup = chatStorageService.enableAutoSave(messages, currentThreadId);
+       setAutoSaveCleanup(() => cleanup);
+     }
+   }, [messages, currentThreadId]);
 
-      const data = await response.json();
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        text: data.choices[0].message.content,
-        sender: 'ai' as const
-      };
++  const handleDeployAsTask = async () => {
++    if (!inputMessage.trim() || isDeploying) return;
++
++    // Find an active background agent
++    const activeAgents = taskManagementService.getActiveAgents();
++    if (activeAgents.length === 0) {
++      alert('No active background agents available. Please configure and activate agents in the Settings panel.');
++      return;
++    }
++
++    // Use the first active agent for simplicity
++    const selectedAgent = activeAgents[0];
++    
++    setIsDeploying(true);
++    
++    try {
++      const taskId = await taskManagementService.initiateBackgroundTask(
++        selectedAgent.id,
++        inputMessage,
++        'general'
++      );
++      
++      // Clear the input
++      setInputMessage('');
++      
++      // Show success message
++      alert(`Task deployed successfully to ${selectedAgent.name}! Task ID: ${taskId}`);
++      
++      // Optionally switch to tasks panel to see the progress
++      // setActivePanel('tasks');
++    } catch (error) {
++      console.error('Error deploying task:', error);
++      alert(`Error deploying task: ${error instanceof Error ? error.message : 'Unknown error'}`);
++    } finally {
++      setIsDeploying(false);
++    }
++  };
 
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error:', error);
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        text: 'Sorry, there was an error processing your message.',
-        sender: 'ai' as const
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
-    }
-  };
+   const handleSendMessage = async () => {
+     if (!inputMessage.trim() || isLoading) return;
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+     const userMessage: Message = {
+       id: Date.now().toString(),
+       content: inputMessage,
+       role: 'user',
+       timestamp: new Date()
+     };
 
-  return (
-    <div className="app">
-      <div className="chat-container">
-        <div className="header">
-          <h1>Simple Chat App</h1>
-        </div>
-        
-        <div className="messages">
-          {messages.map(message => (
-            <div key={message.id} className={`message ${message.sender}`}>
-              <div className="message-content">
-                {message.text}
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className="message ai">
-              <div className="message-content">
-                Thinking...
-              </div>
-            </div>
-          )}
-        </div>
+     const newMessages = [...messages, userMessage];
+     setMessages(newMessages);
+     setInputMessage('');
+     setIsLoading(true);
 
-        <div className="input-area">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message..."
-            rows={3}
-          />
-          <button onClick={sendMessage} disabled={!input.trim() || loading}>
-            Send
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+     try {
+       // Get conversation context for the main agent
+       const conversationHistory = chatStorageService.getFullConversationHistory(newMessages);
+      
+      // Get learning context from rated responses
+      const learningContext = await chatStorageService.getLearningContextForMainAgent();
+      
+      const contextualPrompt = `${conversationHistory}${learningContext}\n\nUser: ${inputMessage}`;
+       
+       const response = await chatService.sendMessage(contextualPrompt, undefined, undefined, true);
+       
+       const assistantMessage: Message = {
+         id: (Date.now() + 1).toString(),
+         content: response.content,
+         role: 'assistant',
+         timestamp: new Date()
+       };
 
-export default App;
+       const finalMessages = [...newMessages, assistantMessage];
+       setMessages(finalMessages);
+
+       // Save or update thread
+       const threadId = currentThreadId || chatStorageService.saveCurrentThread(finalMessages);
+       if (!currentThreadId) {
+         setCurrentThreadId(threadId);
+       } else {
+         chatStorageService.saveCurrentThread(finalMessages, threadId);
+       }
+     } catch (error) {
+       console.error('Error sending message:', error);
+     } finally {
+       setIsLoading(false);
+     }
+   };
+
+@@ .. @@
+             {/* Input */}
+             <div className="p-4 border-t border-blue-200 bg-blue-50">
+               <div className="flex space-x-3">
+                 <textarea
+                   value={inputMessage}
+                   onChange={(e) => setInputMessage(e.target.value)}
+                   onKeyPress={handleKeyPress}
+                   placeholder="Type your message... (Shift+Enter for new line)"
+                   className="flex-1 px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-300 resize-none bg-white shadow-sm"
+                   rows={3}
+                   disabled={isLoading || isDeploying}
+                 />
+-                <button
+-                  onClick={handleSendMessage}
+-                  disabled={!inputMessage.trim() || isLoading}
+-                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2 shadow-md"
+-                >
+-                  <Send size={16} />
+-                  <span>Send</span>
+-                </button>
++                <div className="flex flex-col space-y-2">
++                  <button
++                    onClick={handleSendMessage}
++                    disabled={!inputMessage.trim() || isLoading || isDeploying}
++                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2 shadow-md"
++                  >
++                    <Send size={16} />
++                    <span>Send</span>
++                  </button>
++                  <button
++                    onClick={handleDeployAsTask}
++                    disabled={!inputMessage.trim() || isLoading || isDeploying || backgroundAgents.length === 0}
++                    className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2 shadow-md text-sm"
++                    title={backgroundAgents.length === 0 ? 'No active background agents' : `Deploy to ${backgroundAgents[0]?.name || 'background agent'}`}
++                  >
++                    <Clock size={14} />
++                    <span>{isDeploying ? 'Deploying...' : 'Deploy as Task'}</span>
++                  </button>
++                </div>
+               </div>
++              {backgroundAgents.length > 0 && (
++                <div className="mt-2 text-xs text-blue-600">
++                  Ready to deploy to: {backgroundAgents.map(agent => agent.name).join(', ')}
++                </div>
++              )}
+             </div>
+           </div>
+         );

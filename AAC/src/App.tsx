@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Settings, Clock, TrendingUp, User, Terminal, Send, Star, Calendar } from 'lucide-react';
+import { MessageCircle, Settings, Clock, TrendingUp, User, Terminal, Send, Star } from 'lucide-react';
 import { MarkdownRenderer } from './components/MarkdownRenderer';
 import { Message, ChatThread, Agent } from './types';
 import { chatService } from './services/chat';
@@ -11,9 +11,8 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { MainAgentConfig } from './components/MainAgentConfig';
 import { MCPServerManager } from './components/MCPServerManager';
 import { MessageBubble } from './components/MessageBubble';
-import { LearningCalendar } from './components/LearningCalendar';
 
-type ActivePanel = 'chat' | 'threads' | 'tasks' | 'learning' | 'calendar' | 'settings' | 'main-agent' | 'mcp';
+type ActivePanel = 'chat' | 'threads' | 'tasks' | 'learning' | 'settings' | 'main-agent' | 'mcp';
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -171,8 +170,6 @@ function App() {
         return <BackgroundTasks />;
       case 'learning':
         return <LearningPanel />;
-      case 'calendar':
-        return <LearningCalendar />;
       case 'settings':
         return <SettingsPanel />;
       case 'main-agent':
@@ -319,7 +316,6 @@ function App() {
         {renderSidebarButton('threads', <MessageCircle size={20} />, 'Chat Threads')}
         {renderSidebarButton('tasks', <Clock size={20} />, 'Background Tasks')}
         {renderSidebarButton('learning', <TrendingUp size={20} />, 'Learning Analytics')}
-        {renderSidebarButton('calendar', <Calendar size={20} />, 'Learning Calendar')}
         {renderSidebarButton('main-agent', <User size={20} />, 'Main Agent Config')}
         {renderSidebarButton('settings', <Settings size={20} />, 'Agent Settings')}
         {renderSidebarButton('mcp', <Terminal size={20} />, 'MCP Servers')}
