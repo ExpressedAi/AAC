@@ -65,7 +65,8 @@ class ChatService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${response.statusText}. Response: ${errorText}`);
       }
 
       const data = await response.json();
