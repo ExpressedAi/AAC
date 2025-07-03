@@ -11,7 +11,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { MainAgentConfig } from './components/MainAgentConfig';
 import { MCPServerManager } from './components/MCPServerManager';
 import { MessageBubble } from './components/MessageBubble';
-import { LearningCalendar } from './components/LearningCalendar.tsx';
+import { LearningCalendar } from './components/LearningCalendar';
 
 type ActivePanel = 'chat' | 'threads' | 'tasks' | 'learning' | 'calendar' | 'settings' | 'main-agent' | 'mcp';
 
