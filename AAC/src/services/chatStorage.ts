@@ -63,7 +63,11 @@ class ChatStorageService {
         .map((thread: any) => ({
           ...thread,
           createdAt: new Date(thread.createdAt),
-          updatedAt: new Date(thread.updatedAt)
+          updatedAt: new Date(thread.updatedAt),
+          messages: thread.messages ? thread.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          })) : []
         }))
         .sort((a: ChatThread, b: ChatThread) => b.updatedAt.getTime() - a.updatedAt.getTime());
     } catch (error) {
