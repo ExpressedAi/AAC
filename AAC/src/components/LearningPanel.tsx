@@ -87,8 +87,8 @@ export const LearningPanel: React.FC = () => {
   };
 
   const getImprovementIcon = (rate: number) => {
-    if (rate > 5) return <TrendingUp className="text-green-600\" size={16} />;
-    if (rate > 0) return <TrendingUp className="text-blue-600\" size={16} />;
+    if (rate > 5) return <TrendingUp className="text-green-600" size={16} />;
+    if (rate > 0) return <TrendingUp className="text-blue-600" size={16} />;
     return <BarChart3 className="text-yellow-600" size={16} />;
   };
 
